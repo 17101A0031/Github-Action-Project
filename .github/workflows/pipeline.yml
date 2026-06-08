@@ -122,6 +122,6 @@ jobs:
       with:
         context: .
         push: true
-        tags: youngminds73/bankapp:latest
+        tags: sidk27/bankapp:latest
         file: ./Dockerfile
 
