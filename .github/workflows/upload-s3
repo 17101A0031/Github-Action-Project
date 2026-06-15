@@ -1,4 +1,4 @@
-name: CI-CD pipeline
+name: upload-s3
 on:
   workflow_dispatch:
 
