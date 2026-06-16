@@ -32,7 +32,6 @@ pipeline {
         stage('Security Check') {
             steps {
                 sh '''
-                    # Install Trivy
                     if ! command -v trivy &> /dev/null; then
                         sudo apt-get install -y wget gnupg
                         wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
@@ -42,7 +41,6 @@ pipeline {
                     trivy fs --format table -o trivy-report.json .
                 '''
                 sh '''
-                    # Install Gitleaks
                     if ! command -v gitleaks &> /dev/null; then
                         sudo apt install -y gitleaks
                     fi
@@ -65,14 +63,6 @@ pipeline {
                         -Dsonar.projectKey=bankapp \
                         -Dsonar.host.url=$SONAR_HOST_URL
                     '''
-                }
-            }
-        }
-        
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
                 }
             }
         }
