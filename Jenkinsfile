@@ -30,30 +30,24 @@ pipeline {
         }
         
         stage('Security Check') {
-            parallel {
-                stage('Trivy Scan') {
-                    steps {
-                        sh '''
-                            if ! command -v trivy &> /dev/null; then
-                                sudo apt-get install -y wget gnupg
-                                wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-                                echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-                                sudo apt-get update && sudo apt-get install -y trivy
-                            fi
-                            trivy fs --format table -o trivy-report.json .
-                        '''
-                    }
-                }
-                stage('Gitleaks Scan') {
-                    steps {
-                        sh '''
-                            if ! command -v gitleaks &> /dev/null; then
-                                sudo apt install -y gitleaks
-                            fi
-                            gitleaks detect --source . -r gitleaks-report.json -f json || true
-                        '''
-                    }
-                }
+            steps {
+                sh '''
+                    # Install Trivy
+                    if ! command -v trivy &> /dev/null; then
+                        sudo apt-get install -y wget gnupg
+                        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+                        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+                        sudo apt-get update && sudo apt-get install -y trivy
+                    fi
+                    trivy fs --format table -o trivy-report.json .
+                '''
+                sh '''
+                    # Install Gitleaks
+                    if ! command -v gitleaks &> /dev/null; then
+                        sudo apt install -y gitleaks
+                    fi
+                    gitleaks detect --source . -r gitleaks-report.json -f json || true
+                '''
             }
         }
         
@@ -111,8 +105,11 @@ pipeline {
                         export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
                         export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
                         export AWS_DEFAULT_REGION=$AWS_REGION
-                        aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
-                        kubectl create namespace $KUBE_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+                        aws eks update-kubeconfig \
+                            --name $EKS_CLUSTER \
+                            --region $AWS_REGION
+                        kubectl create namespace $KUBE_NAMESPACE \
+                            --dry-run=client -o yaml | kubectl apply -f -
                         kubectl apply -f ds.yml
                         kubectl rollout status deployment/bankapp -n $KUBE_NAMESPACE
                         kubectl get pods -n $KUBE_NAMESPACE
@@ -125,10 +122,10 @@ pipeline {
     
     post {
         success {
-            echo 'Pipeline Successful!'
+            echo '✅ Pipeline Successful!'
         }
         failure {
-            echo 'Pipeline Failed!'
+            echo '❌ Pipeline Failed!'
         }
         always {
             cleanWs()
